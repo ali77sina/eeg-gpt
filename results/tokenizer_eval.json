@@ -1,0 +1,27 @@
+{
+ "history": {
+  "step": 8000,
+  "train_rec": 0.07893233001232147,
+  "heldout_rec": 0.09737090021371841,
+  "snr_db": 14.486113724166113,
+  "code_perplexity": 417.20349664397725,
+  "codes_used": 493
+ },
+ "K": 512,
+ "stride_ms": 100,
+ "heldout_recon_mse": 0.09580932557582855,
+ "heldout_snr_db": 14.967187881409458,
+ "band_power_ratio_recon_over_orig": {
+  "delta": 0.9906385540962219,
+  "theta": 0.9559272527694702,
+  "alpha": 0.9095171093940735,
+  "sigma": 0.855899453163147,
+  "beta": 0.4608883857727051
+ },
+ "token_stage_MI_bits": 0.12227368588076529,
+ "stage_entropy_bits": 1.8922977141479453,
+ "heldout_unigram_bits": 8.718139355847143,
+ "heldout_bigram_bits": 8.440390237478459,
+ "n_train_tokens": 5895900,
+ "n_heldout_tokens": 1503600
+}

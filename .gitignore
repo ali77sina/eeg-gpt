@@ -1,0 +1,5 @@
+__pycache__/
+*.bin
+corpus_out/
+wandb/
+.DS_Store
