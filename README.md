@@ -97,18 +97,20 @@ Seed the model with 25 s of real held-out EEG in each stage and let it continue.
 
 ![long sample and spectra](figures/samples_long_and_spectra.png)
 
-### Scaling, as far as it got
+### Scaling
 
-A sweep at 150k steps with a fixed 256-window held-out evaluation set, run on rented GPUs and stopped early:
+![scaling](figures/scaling.png)
 
-| Model | Layers x width | Params | Held-out bits |
-|---|---|---|---|
-| S | 4 x 256 | 3.7M | 7.619 |
-| M | 8 x 384 | 15M | 7.554 |
-| L | 12 x 512 | 39M | stopped at step 3k |
-| XL | 16 x 768 | 115M | stopped at step 2k |
+Four sizes, same data, same context, fixed 256-window held-out evaluation set. S and M ran the full 150k steps; L and XL were stopped at 26k and 34k. Held-out bits at step 26k, the last point all four reached:
 
-At 2.3B tokens the 115M model sits at 20 tokens per parameter, so anything bigger needs more data rather than more compute. Curves for S and M are on Weights & Biases (project `eeg-gpt-scaling`). The S and M weights were lost when the pods were deleted; only the 15M run-1 checkpoint survives, and it is the one in this repo.
+| Model | Layers x width | Params | Held-out at step 26k | Best reached |
+|---|---|---|---|---|
+| S | 4 x 256 | 3.7M | 7.749 | 7.619 (150k) |
+| M | 8 x 384 | 15M | 7.627 | 7.554 (150k) |
+| L | 12 x 512 | 39M | 7.583 | 7.583 (26k) |
+| XL | 16 x 768 | 115M | 7.556 | 7.546 (34k) |
+
+Every size step helps at equal compute, and XL at 34k steps already beats M at 150k. Train and held-out stayed equal for all four. At 2.3B tokens the 115M model is at about 20 tokens per parameter, so the next gain is more data, not a bigger model. Full histories are in `results/wandb_sweep.json` and on Weights & Biases (project `eeg-gpt-scaling`). Only the run-1 15M weights survive; the sweep weights were lost with the pods.
 
 ## Things that went wrong and are worth knowing
 
