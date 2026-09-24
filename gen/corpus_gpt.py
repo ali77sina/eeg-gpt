@@ -60,6 +60,17 @@ if __name__ == "__main__":
                                       config=dict(params=n_params, L=L, DM=DM, H=H, ctx=CTX, bs=BS, steps=STEPS, lr=LR, train_tokens=ntr, n_eval_windows=N_EVAL))
     opt = torch.optim.AdamW(m.parameters(), LR, betas=(0.9, 0.95), weight_decay=0.1); sched = torch.optim.lr_scheduler.OneCycleLR(opt, LR, total_steps=STEPS, pct_start=0.03)
     start = 1
+    UPLOAD_EVERY = int(os.environ.get("UPLOAD_EVERY", 5000)); ART = f"{RUN}-ckpt"
+    def upload(step, final=False):   # push full checkpoint (model+opt+sched) and config to W&B as a versioned model artifact
+        if not wb: return
+        import wandb
+        a = wandb.Artifact(ART, type="model", metadata=dict(step=step, params=n_params, L=L, DM=DM, H=H, ctx=CTX, heldout_bits=hist[-1]["heldout_bits"] if hist else None))
+        a.add_file(f"{OUT}/gpt_ckpt.pt"); a.add_file(f"{OUT}/gpt.pt"); a.add_file(f"{TOK}/tags.json")
+        wb.log_artifact(a, aliases=["latest", f"step{step}"] + (["final"] if final else []))
+    if not os.path.exists(f"{OUT}/gpt_ckpt.pt") and wb:   # pod disk lost: pull the latest checkpoint back from W&B
+        try:
+            d = wb.use_artifact(f"{ART}:latest").download(root=OUT); log(f"restored checkpoint from W&B artifact {ART}:latest")
+        except Exception as e: log(f"no W&B checkpoint to restore ({type(e).__name__})")
     if os.path.exists(f"{OUT}/gpt_ckpt.pt"):
         ck = torch.load(f"{OUT}/gpt_ckpt.pt", map_location=dev); m.load_state_dict(ck["model"]); opt.load_state_dict(ck["opt"]); sched.load_state_dict(ck["sched"]); start = ck["step"] + 1; log(f"resumed at step {start}")
     t0 = time.time(); hist = json.load(open(f"{OUT}/gpt_hist.json")) if os.path.exists(f"{OUT}/gpt_hist.json") and start > 1 else []
@@ -74,5 +85,7 @@ if __name__ == "__main__":
             if wb: wb.log(dict(step=step, train_bits=tb, heldout_bits=hb, lr=sched.get_last_lr()[0], tokens_seen=step * BS * CTX, sec_per_step=(time.time()-t0)/(step-start+1)), step=step)
             torch.save(m.state_dict(), f"{OUT}/gpt.pt"); torch.save(dict(model=m.state_dict(), opt=opt.state_dict(), sched=sched.state_dict(), step=step), f"{OUT}/gpt_ckpt.pt")
             json.dump(hist, open(f"{OUT}/gpt_hist.json", "w"), indent=1)
+            if step % UPLOAD_EVERY == 0: upload(step)
+    upload(STEPS, final=True)
     if wb: wb.summary["final_heldout_bits"] = hist[-1]["heldout_bits"]; wb.finish()
     open(f"{OUT}/DONE", "w").write(str(hist[-1])); log("done")
