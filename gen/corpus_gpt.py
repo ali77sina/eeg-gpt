@@ -63,9 +63,12 @@ if __name__ == "__main__":
     UPLOAD_EVERY = int(os.environ.get("UPLOAD_EVERY", 5000)); ART = f"{RUN}-ckpt"
     def upload(step, final=False):   # push full checkpoint (model+opt+sched) and config to W&B as a versioned model artifact
         if not wb: return
+        try: _upload(step, final)
+        except Exception as e: log(f"W&B upload failed at step {step}: {e!r}")   # never let an upload kill training
+    def _upload(step, final):
         import wandb
         a = wandb.Artifact(ART, type="model", metadata=dict(step=step, params=n_params, L=L, DM=DM, H=H, ctx=CTX, heldout_bits=hist[-1]["heldout_bits"] if hist else None))
-        a.add_file(f"{OUT}/gpt_ckpt.pt"); a.add_file(f"{OUT}/gpt.pt"); a.add_file(f"{TOK}/tags.json")
+        a.add_file(f"{OUT}/gpt_ckpt.pt"); a.add_file(f"{OUT}/gpt.pt"); a.add_file(f"{OUT}/tags.json")
         wb.log_artifact(a, aliases=["latest", f"step{step}"] + (["final"] if final else []))
     if not os.path.exists(f"{OUT}/gpt_ckpt.pt") and wb:   # pod disk lost: pull the latest checkpoint back from W&B
         try:
